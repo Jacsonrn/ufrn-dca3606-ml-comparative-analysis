@@ -1,0 +1,15 @@
+# Ambientes Virtuais
+.venv/
+venv/
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# Python Cache
+__pycache__/
+*.py[cod]
+
+# Ignorar dados pesados para não sobrecarregar o GitHub
+data/
+*.csv
+*.xlsx
