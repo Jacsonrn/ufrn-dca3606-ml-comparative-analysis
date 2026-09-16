@@ -40,7 +40,7 @@ A EDA não é apenas sobre desenhar gráficos coloridos, mas sobre a descoberta 
 * **Estratificação (Stratify):** Usamos o parâmetro `stratify` na classificação para garantir que os conjuntos de Treino e Teste preservem rigorosamente a proporção biológica de 62/38, impedindo que, por obra do acaso matemático, a nossa matriz de teste recebesse apenas pacientes benignos.
 * **StandardScaler (Normalização Z-Score):** Transforma os dados forçando-os a ter média 0 e desvio padrão 1. É mandatório para modelos que calculam distância geométrica (K-Means, SVM) e otimização por Gradiente Descendente (Redes Neurais). Ele impede que variáveis milionárias anulem o peso matemático de variáveis de baixa magnitude.
 
-### ❓ 10 Perguntas a Análise Exploratória (EDA)
+### ❓ 10 Perguntas sobre a Análise Exploratória (EDA)
 1. O que é um *outlier* (ponto fora da curva) e como ele é visivelmente identificado no gráfico de Boxplot que vocês plotaram?
 2. O que representa, matematicamente falando, a "caixa" central de um Boxplot? (Resposta esperada: O Intervalo Interquartil - IQR, que vai do percentil 25% ao 75%).
 3. Vocês notaram desbalanceamento nas classes do Breast Cancer. Como a matemática dos modelos lida com classes desbalanceadas?
@@ -52,7 +52,7 @@ A EDA não é apenas sobre desenhar gráficos coloridos, mas sobre a descoberta 
 9. O que significa dizer que um histograma tem um "viés à direita" (right-skewed distribution), como vimos nos preços das casas?
 10. Os algoritmos baseados em árvores (Decision Tree, Random Forest) sofrem muito impacto negativo por causa dos outliers que vimos nos Boxplots?
 
-### ❓ 10 Perguntas o Pré-Processamento
+### ❓ 10 Perguntas sobre o Pré-Processamento
 1. Por que é estritamente obrigatório dividir os dados em treino e teste antes de fazer qualquer modelagem? O que é um modelo em *Overfitting*?
 2. Vocês utilizaram `stratify` apenas na divisão do dataset de câncer. O que isso faz no código e por que é vital para não distorcer o teste?
 3. Por que vocês NÃO usaram a estratificação na hora de dividir o California Housing? (Resposta esperada: porque variáveis contínuas numéricas não formam classes).
