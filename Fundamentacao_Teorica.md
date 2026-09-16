@@ -9,9 +9,36 @@ Este documento centraliza a teoria matemática e estratégica por trás de todas
 Neste dia, estabelecemos a fundação do projeto, configurando a infraestrutura virtual (`.venv`) e selecionando as bases de dados que determinariam a complexidade matemática dos dias seguintes.
 
 ### 📚 Fundamentação Teórica do Dia 1
-A escolha dos dados define o teto de sucesso do treinamento. Optamos por **Breast Cancer** (Classificação) e **California Housing** (Regressão) porque ambos possuem volume amostral estatisticamente significativo (≥ 500 observações), não possuem dados faltantes nativamente, e contêm 100% de *features* (variáveis explicativas) numéricas contínuas. 
 
-Essa natureza estritamente numérica evita a *Maldição da Dimensionalidade* que ocorreria se precisássemos aplicar *One-Hot Encoding* em múltiplas variáveis categóricas (texto). Assim, nossa equipe manteve a complexidade e o tempo de computação focados apenas onde o projeto exige: no estudo de desempenho e nas métricas dos 12 modelos de Machine Learning.
+**1. Aprendizado Supervisionado vs. Não Supervisionado**
+O Machine Learning se divide em dois grandes paradigmas. No **Aprendizado Supervisionado**, o algoritmo recebe um conjunto de dados onde cada exemplo possui uma "resposta correta" associada (o rótulo, ou *label*). O modelo aprende a mapear entradas para saídas observando esses pares (entrada, resposta). No **Aprendizado Não Supervisionado**, o algoritmo recebe apenas os dados brutos, sem nenhum gabarito, e precisa descobrir padrões ocultos por conta própria (agrupamentos, redução de dimensionalidade). A escolha dos datasets para este projeto precisou atender a ambos os paradigmas: os rótulos servem para treinar os 12 modelos supervisionados, e os mesmos atributos numéricos (sem os rótulos) serão usados para alimentar PCA, K-Means e DBSCAN no Dia 3.
+
+**2. Classificação vs. Regressão: A Natureza da Variável Alvo**
+Dentro do Aprendizado Supervisionado, a natureza estatística da variável alvo (*target*) define se o problema é de **Classificação** ou de **Regressão**:
+* **Classificação:** A variável alvo é **categórica** (discreta). Ela pertence a um conjunto finito de classes. No Breast Cancer, o alvo é binário: `0 = Maligno` ou `1 = Benigno`. O modelo precisa aprender a "decidir" a qual classe cada nova amostra pertence. Quando existem apenas duas classes, chamamos de **Classificação Binária**; quando existem três ou mais, chamamos de **Classificação Multiclasse**.
+* **Regressão:** A variável alvo é **numérica contínua**. Ela pode assumir infinitos valores dentro de um intervalo real. No California Housing, o alvo é o preço mediano das casas (`MedHouseVal`), que varia continuamente (ex: 1.234, 3.500, 5.001). O modelo precisa aprender a "prever um número", não a escolher uma categoria.
+
+Esta distinção é absolutamente vital porque ela determina quais algoritmos, quais funções de perda (*loss functions*) e quais métricas de avaliação são matematicamente válidas. Aplicar uma métrica de classificação (como Acurácia) num problema de regressão é um erro conceitual grave, e vice-versa.
+
+**3. Critérios de Seleção dos Datasets**
+A escolha dos dados define o teto de sucesso do treinamento. Optamos por **Breast Cancer Wisconsin** (Classificação) e **California Housing** (Regressão) com base nos seguintes critérios técnicos rigorosos:
+* **Volume Amostral:** Ambos possuem volume estatisticamente significativo (569 e 20.640 amostras, respectivamente), superando com folga o mínimo de 500 exigido pela disciplina. Volumes maiores reduzem a variância nas estimativas de desempenho e permitem que os modelos capturem padrões mais robustos.
+* **Ausência de Dados Faltantes (*Missing Values*):** Nenhum dos dois datasets contém valores nulos. Isso elimina a necessidade de técnicas de imputação (como substituir valores ausentes pela média ou mediana), que introduziriam ruído artificial e adicionariam uma camada de complexidade desnecessária ao escopo deste projeto.
+* **Natureza 100% Numérica das Features:** Todas as variáveis explicativas (colunas) são números reais (`float64`). Isso é estratégico porque evita a necessidade de aplicar técnicas de codificação categórica.
+
+**4. A Maldição da Dimensionalidade e o One-Hot Encoding**
+Se tivéssemos escolhido um dataset com variáveis categóricas (exemplo: uma coluna "Cor" com valores "Vermelho", "Azul", "Verde"), precisaríamos convertê-las em números usando uma técnica chamada **One-Hot Encoding**. Essa técnica cria uma nova coluna binária (0 ou 1) para cada categoria existente. Se a coluna "Cidade" tivesse 200 cidades diferentes, o One-Hot Encoding adicionaria 200 novas colunas à nossa matriz de dados. Esse fenômeno é a **Maldição da Dimensionalidade** (*Curse of Dimensionality*): quando o número de colunas cresce descontroladamente, o espaço geométrico fica tão vasto e esparso que os algoritmos de distância (como K-Means e KNN) perdem completamente a capacidade de medir proximidade entre pontos, e o tempo de computação explode exponencialmente.
+
+Ao escolher datasets estritamente numéricos, mantivemos a complexidade e o tempo de computação focados apenas onde o projeto exige: no estudo de desempenho e nas métricas dos 12 modelos de Machine Learning.
+
+**5. Datasets como Standard Benchmarks**
+Breast Cancer Wisconsin e California Housing são **datasets de referência padrão** (*standard benchmarks*) na comunidade global de Ciência de Dados. O criador da biblioteca `scikit-learn` os embutiu diretamente no código-fonte da ferramenta (`load_breast_cancer()` e `fetch_california_housing()`), precisamente para que engenheiros e pesquisadores testem algoritmos sem depender de downloads externos. Isso garante **reprodutibilidade** total: qualquer pessoa em qualquer computador do mundo, ao rodar nosso código, obterá os mesmos dados e os mesmos resultados numéricos.
+
+**6. Configuração do Ambiente Virtual (`.venv`)**
+Um **ambiente virtual** é um diretório isolado que contém uma instalação independente do Python e de todas as suas bibliotecas. Ele resolve um problema crítico de engenharia de software: o **conflito de dependências**. Se o seu sistema operacional usa o Python 3.8 com a versão 0.24 do `scikit-learn`, mas o nosso projeto precisa da versão 1.3, instalar a versão nova globalmente poderia quebrar outros programas do seu computador. O `.venv` isola completamente essas versões, e o arquivo `requirements.txt` garante que qualquer colega de equipe instale exatamente as mesmas versões, garantindo **reprodutibilidade** do ambiente.
+
+**7. O Papel do `random_state=42`**
+Em diversos pontos do código, usamos o parâmetro `random_state=42`. Algoritmos como `train_test_split` e `KMeans` dependem de números aleatórios internamente (para embaralhar dados, para inicializar centroides). Se não fixássemos essa semente, cada execução do código produziria resultados ligeiramente diferentes, impossibilitando a comparação justa entre modelos. Fixando a semente em 42 (um número arbitrário, escolhido por convenção da comunidade), garantimos que toda execução reproduza exatamente o mesmo embaralhamento e as mesmas inicializações.
 
 ### ❓ 10 Perguntas da Banca sobre o Dia 1
 1. Por que vocês escolheram o dataset Breast Cancer especificamente para a tarefa de classificação? O que o torna didático?
@@ -33,13 +60,75 @@ Neste dia, transformamos os dados brutos. Primeiro, investigamos as anomalias vi
 
 ### 📚 Fundamentação Teórica do Dia 2
 
-**1. Sobre a Análise Exploratória (EDA)**
-A EDA não é apenas sobre desenhar gráficos coloridos, mas sobre a descoberta de anomalias que quebram premissas matemáticas dos modelos. O uso da função `.describe()` validou a diferença drástica de escalas de grandeza entre as colunas. A plotagem do *Boxplot* revelou a presença estrutural de *outliers* na coluna de renda (MedInc). Já o *Countplot* atestou um leve desbalanceamento no dataset de Câncer (62% benigno vs 38% maligno), o que exigirá muita atenção à métrica de *Recall* no Dia 5, já que errar um diagnóstico maligno (falso-negativo) é fatal.
+**1. Análise Exploratória de Dados (EDA) — Conceito e Objetivo**
+A *Exploratory Data Analysis* (EDA) é uma disciplina estatística formalizada por John Tukey na década de 1970. Seu objetivo é investigar os dados antes de aplicar qualquer modelo, usando ferramentas visuais e numéricas para descobrir: a distribuição estatística de cada variável, a existência de valores atípicos (outliers), a presença de correlações entre variáveis, e se há desbalanceamento entre as classes no caso de classificação. A EDA não é uma etapa opcional ou cosmética — ela revela informações que, se ignoradas, podem fazer um modelo aparentemente "perfeito" falhar catastroficamente na realidade.
 
-**2. Sobre o Pré-Processamento e Padronização**
-* **Train/Test Split:** Aplicamos uma separação de 80/20 para garantir o Método *Holdout*, reservando dados virgens para testar o poder de generalização do modelo e evitar o temido *Overfitting* (memorização). 
-* **Estratificação (Stratify):** Usamos o parâmetro `stratify` na classificação para garantir que os conjuntos de Treino e Teste preservem rigorosamente a proporção biológica de 62/38, impedindo que, por obra do acaso matemático, a nossa matriz de teste recebesse apenas pacientes benignos.
-* **StandardScaler (Normalização Z-Score):** Transforma os dados forçando-os a ter média 0 e desvio padrão 1. É mandatório para modelos que calculam distância geométrica (K-Means, SVM) e otimização por Gradiente Descendente (Redes Neurais). Ele impede que variáveis milionárias anulem o peso matemático de variáveis de baixa magnitude.
+**2. Estatísticas Descritivas (`.describe()`)**
+A função `.describe()` do pandas calcula, para cada coluna numérica, um resumo composto por 8 valores fundamentais:
+* **count:** Número de valores não-nulos (confirma a integridade dos dados).
+* **mean (Média):** A soma de todos os valores dividida pela contagem. Indica o "centro de gravidade" da distribuição.
+* **std (Desvio Padrão):** Mede a dispersão dos valores em torno da média. Um desvio padrão alto significa que os valores estão muito espalhados; um desvio baixo significa que estão concentrados. É a raiz quadrada da **variância**.
+* **min / max:** Os valores extremos da coluna. Permitem identificar imediatamente se existe algum valor absurdo (ex: uma idade de -5 anos indicaria um erro de digitação).
+* **25% / 50% / 75% (Quartis):** Dividem os dados ordenados em quatro partes iguais. O 50% é a **mediana**, que é mais robusta que a média na presença de outliers (uma única casa de R$ 100 milhões distorce a média, mas não a mediana).
+
+Ao analisar essas estatísticas, descobrimos que as features dos nossos datasets estão em escalas de grandeza drasticamente diferentes: no California Housing, `MedInc` (renda) varia de 0,5 a 15, enquanto `Population` varia de 3 a 35.000. Essa diferença de 1000x é o exato motivo pelo qual precisamos padronizar os dados.
+
+**3. Boxplot: Anatomia Matemática e Detecção de Outliers**
+O Boxplot é um gráfico que resume uma distribuição numérica em 5 elementos visuais, baseados nos **quartis**:
+* A **linha inferior da caixa** marca o 1º quartil (Q1 = 25%).
+* A **linha central da caixa** marca a mediana (Q2 = 50%).
+* A **linha superior da caixa** marca o 3º quartil (Q3 = 75%).
+* A altura da caixa é o **IQR (Intervalo Interquartil):** `IQR = Q3 - Q1`.
+* Os "bigodes" (*whiskers*) se estendem até 1.5 × IQR acima de Q3 e abaixo de Q1. 
+* Qualquer ponto plotado **além** dos bigodes é matematicamente classificado como um **outlier** (valor atípico).
+
+No nosso projeto, o Boxplot da coluna `MedInc` (renda mediana) no California Housing revelou a presença de outliers na faixa superior, ou seja, bairros com renda mediana muito acima da norma geral. Essa informação é crucial porque modelos sensíveis a escala (como Regressão Linear, SVM e Redes Neurais) terão seus coeficientes distorcidos por esses pontos extremos, enquanto modelos baseados em árvores (Random Forest, XGBoost) são naturalmente imunes a outliers, pois tomam decisões baseadas em limiares de corte (splits), não em distâncias geométricas.
+
+**4. Histograma, Distribuição e Assimetria (*Skewness*)**
+O Histograma divide o intervalo de valores de uma variável em faixas ("bins") e conta quantas observações caem em cada faixa, formando barras verticais. Diferente de um gráfico de barras simples (que compara categorias distintas como "Masculino" e "Feminino"), o Histograma representa uma **distribuição contínua** de probabilidade.
+
+No histograma do preço dos imóveis (`MedHouseVal`), observamos uma **assimetria à direita** (*right-skewed* ou *positive skew*): a maioria das casas se concentra em preços baixos/médios, mas existe uma cauda longa de casas muito caras puxando a distribuição para a direita. Em distribuições assimétricas, a média é arrastada na direção da cauda (ficando maior que a mediana), o que pode enganar análises ingênuas. Essa assimetria no California Housing também explica por que o histograma mostra um "pico" artificial no valor máximo (~5.0): o dataset original limitou (*capped*) todos os preços acima de $500K a esse teto.
+
+**5. Desbalanceamento de Classes**
+No dataset Breast Cancer, a verificação revelou que 62.7% das amostras são tumores benignos e 37.3% são malignos. Isso configura um **desbalanceamento moderado**. Em cenários extremos (ex: 99% benigno, 1% maligno), um modelo "preguiçoso" que sempre preveja "benigno" atingiria 99% de acurácia sem ter aprendido absolutamente nada sobre tumores malignos. Por isso, a **Acurácia** sozinha é uma métrica enganosa em datasets desbalanceados.
+
+No contexto médico, um **Falso Negativo** (classificar um tumor maligno como benigno) é catastroficamente mais grave do que um Falso Positivo (classificar um benigno como maligno, gerando apenas um susto). É por isso que, no Dia 5, quando avaliarmos os modelos de classificação, daremos atenção especial ao **Recall** (Sensibilidade): a taxa de acerto especificamente entre os tumores que são de fato malignos. O **F1-Score**, que é a média harmônica entre Precisão e Recall, também será crucial como métrica balanceada.
+
+**6. Divisão Treino/Teste: O Método Holdout**
+A divisão Treino/Teste é o mecanismo fundamental para estimar o desempenho real de um modelo em dados que ele nunca viu. A analogia é direta: o professor (treino) ensina a matéria, e a prova (teste) mede se o aluno aprendeu ou apenas decorou.
+
+Aplicamos uma proporção de **80/20** (80% treino, 20% teste), que é a convenção mais consolidada na literatura. Para o Breast Cancer, isso resultou em **455 amostras de treino** e **114 amostras de teste**; para o California Housing, **16.512 de treino** e **4.128 de teste**.
+
+Existe um conceito chamado **Overfitting** (Sobreajuste): ocorre quando o modelo se ajusta excessivamente aos dados de treino, memorizando os padrões específicos (incluindo o ruído) daquele conjunto em vez de aprender regras generalizáveis. Um modelo em overfitting apresenta desempenho excelente no treino mas péssimo no teste. A separação Treino/Teste é a primeira linha de defesa contra essa falha.
+
+**7. Estratificação (*Stratified Sampling*)**
+No `train_test_split` do dataset de classificação (Breast Cancer), usamos o parâmetro `stratify=y_clf`. Esse parâmetro força a função a manter exatamente a mesma proporção de classes (62/38) tanto no conjunto de treino quanto no de teste. Sem estratificação, a divisão aleatória poderia, por puro azar estatístico, colocar quase todos os tumores malignos no treino e quase nenhum no teste, gerando métricas de teste completamente não-representativas.
+
+Não usamos `stratify` no California Housing porque a variável alvo é contínua (um preço numérico). Não existem "classes" discretas para serem proporcionalmente distribuídas. Tentar estratificar por uma variável contínua geraria um erro de código, pois cada preço é praticamente único.
+
+**8. StandardScaler: A Fórmula do Z-Score**
+O `StandardScaler` aplica, para cada coluna, a transformação Z-Score:
+
+`z = (x - μ) / σ`
+
+Onde `x` é o valor original, `μ` é a média da coluna e `σ` é o desvio padrão. Após a transformação, cada coluna terá média = 0 e desvio padrão = 1. Essa padronização é **obrigatória** para algoritmos que dependem do cálculo de distância geométrica:
+* **K-Means e DBSCAN** calculam distância Euclidiana entre pontos. Se uma coluna varia de 0 a 35.000 e outra de 0 a 15, a primeira dominará totalmente o cálculo de distância.
+* **SVM** (Support Vector Machine) encontra o hiperplano que maximiza a margem entre classes. Features com escalas maiores distorcem a orientação do hiperplano.
+* **Redes Neurais (MLP)** usam Gradiente Descendente para ajustar seus pesos. Features em escalas muito diferentes fazem com que o gradiente oscile violentamente em algumas direções e avance lentamente em outras, prejudicando a convergência.
+
+Modelos baseados em **árvores de decisão** (Decision Tree, Random Forest, Gradient Boosting, XGBoost) são naturalmente imunes a diferenças de escala, pois tomam decisões baseadas em limiares de corte ordenados ("a renda é > 5.0?"), não em distâncias geométricas. Ainda assim, padronizamos todos os dados para manter um pipeline único e consistente.
+
+**9. Data Leakage (Vazamento de Dados)**
+O `scaler.fit()` (que calcula a média e o desvio padrão) deve ser executado **exclusivamente** no conjunto de treino (`X_train`), e o `scaler.transform()` é então aplicado tanto no treino quanto no teste usando os parâmetros aprendidos no treino.
+
+Se rodássemos `fit()` na base inteira (treino + teste), a média e o desvio padrão conteriam informações estatísticas dos dados de teste. Isso significa que o modelo estaria, indiretamente, "olhando a prova antes de fazê-la". Esse fenômeno é chamado de **Data Leakage** (Vazamento de Dados) e é um dos erros mais graves (e mais silenciosos) em projetos de Machine Learning, pois infla artificialmente as métricas de desempenho no teste sem que o praticante perceba.
+
+**10. Alternativa: MinMaxScaler**
+Além do `StandardScaler`, existe o **MinMaxScaler**, que transforma os dados para o intervalo [0, 1] usando a fórmula:
+
+`x_scaled = (x - x_min) / (x_max - x_min)`
+
+O MinMaxScaler é preferível em cenários onde: (a) você sabe que os dados não possuem outliers severos (pois um único outlier extremo comprime todos os outros valores perto de zero); (b) o algoritmo exige entradas no intervalo [0, 1] (como redes neurais com funções de ativação sigmoide). Para o nosso projeto, escolhemos o StandardScaler porque ele é mais robusto a outliers (que confirmamos existir no Boxplot) e é a recomendação padrão da documentação do `scikit-learn` para pipelines de classificação e regressão.
 
 ### ❓ 10 Perguntas da Banca sobre a Análise Exploratória (EDA)
 1. O que é um *outlier* (ponto fora da curva) e como ele é visivelmente identificado no gráfico de Boxplot que vocês plotaram?
