@@ -1,7 +1,6 @@
-# 🧠 Fundamentação Teórica e Preparação para Defesa
+# 🧠 Fundamentação Teórica
 
-Este documento centraliza a teoria matemática e estratégica por trás de todas as decisões do código, **organizado estritamente pelo cronograma de dias de desenvolvimento do projeto**. Ele serve como um guia definitivo de estudo para responder às perguntas da banca examinadora durante a apresentação oral.
-
+Este documento centraliza a teoria matemática e estratégica por trás de todas as decisões do código, **organizado estritamente pelo cronograma de dias de desenvolvimento do projeto**.
 ---
 
 # 📅 DIA 1: Seleção dos Datasets e Configuração do Ambiente
