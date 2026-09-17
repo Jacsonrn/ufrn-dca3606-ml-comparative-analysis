@@ -191,3 +191,94 @@ O DBSCAN é brilhante para capturar formas geométricas arbitrárias (que o K-Me
 8. O Silhouette Score vai de -1 a 1. O que significa matematicamente se um ponto receber o score de -0.9? *(R: Que ele foi agrupado no cluster errado e está muito mais próximo do cluster vizinho).*
 9. Por que não foi possível calcular as métricas ARI e NMI para o dataset California Housing, mas sim para o Breast Cancer?
 10. Se a redução de dimensionalidade por PCA funciona tão bem para o Breast Cancer, poderíamos treinar os modelos de classificação dos próximos dias usando apenas os 2 componentes principais em vez das 30 colunas originais? O que ganharíamos e o que perderíamos?
+
+---
+
+# 📅 DIA 4: Modelagem Supervisionada — Regressão
+
+Neste dia, colocamos os dados padronizados do California Housing para serem consumidos por 6 algoritmos distintos de regressão. O objetivo é treinar cada modelo, medir seu desempenho no conjunto de teste (dados que ele nunca viu) e comparar os resultados em uma tabela unificada para identificar qual algoritmo generaliza melhor para o problema de predição de preços imobiliários.
+
+### 📚 Fundamentação Teórica do Dia 4
+
+**1. O Problema de Regressão na Perspectiva Matemática**
+Em um problema de regressão, dado um vetor de entrada $X$ (os atributos de um bairro: renda, idade do imóvel, latitude, longitude...) e um valor alvo $y$ (o preço mediano das casas), o objetivo do modelo é aprender uma função $f$ tal que $\hat{y} = f(X)$ minimize a diferença entre o valor previsto $\hat{y}$ e o valor real $y$. Cada um dos 6 algoritmos que treinamos usa uma estratégia matemática radicalmente diferente para construir essa função $f$, e é exatamente por isso que seus desempenhos variam.
+
+**2. Os 6 Algoritmos de Regressão**
+
+**2.1. Regressão Linear (*Linear Regression*)**
+É o algoritmo mais antigo e mais simples de regressão. Ele assume que a relação entre as features e o preço é **linear** (uma reta em 2D, um hiperplano em múltiplas dimensões). A fórmula geral é:
+
+`ŷ = β₀ + β₁x₁ + β₂x₂ + ... + βₙxₙ`
+
+Onde cada $β$ (beta) é um coeficiente de peso que o modelo calcula usando o método dos **Mínimos Quadrados Ordinários (OLS)**: ele encontra os valores de $β$ que minimizam a soma dos quadrados dos resíduos (a diferença entre o preço real e o previsto, elevada ao quadrado). A Regressão Linear é extremamente rápida (0,08 segundos no nosso teste), mas sua limitação fundamental é a **linearidade**: ela não consegue capturar relações curvas ou interações complexas entre variáveis. No nosso experimento, ela obteve o pior $R^2$ (0.575), confirmando que a relação entre preço e geografia da Califórnia é intrinsecamente não-linear.
+
+**2.2. Árvore de Decisão (*Decision Tree Regressor*)**
+A Árvore de Decisão divide recursivamente o espaço de features em regiões retangulares, fazendo perguntas binárias do tipo "a renda mediana é > 5.0?". Em cada "folha" da árvore, a predição é a **média** dos preços de todas as casas que caíram naquela região. A grande vantagem é que ela captura relações **não-lineares** naturalmente, sem precisar que o engenheiro especifique a forma matemática da relação. Porém, a Árvore de Decisão sofre de **alta variância**: ela tende a memorizar os dados de treino (Overfitting), criando ramificações excessivamente específicas. No nosso teste, ela obteve $R^2 = 0.623$, melhor que a Regressão Linear mas bem abaixo dos modelos ensemble.
+
+**2.3. Random Forest Regressor (Floresta Aleatória)**
+O Random Forest é uma técnica de **Ensemble Learning** (Aprendizado por Comitê): ele treina centenas de Árvores de Decisão (no scikit-learn, 100 por padrão), cada uma com uma amostra diferente dos dados (técnica chamada **Bagging**, ou *Bootstrap Aggregating*) e uma seleção aleatória de features. A predição final é a **média** das predições de todas as árvores. Essa estratégia de "sabedoria das multidões" reduz drasticamente a variância (Overfitting) que afligia a árvore individual. No nosso teste, o Random Forest alcançou $R^2 = 0.804$, um salto enorme em relação à árvore individual (0.623). Usamos `n_jobs=-1` para distribuir o treinamento das 100 árvores pelos 4 núcleos da CPU simultaneamente (paralelismo).
+
+**2.4. XGBoost Regressor (*Extreme Gradient Boosting*)**
+O XGBoost é outro método de Ensemble, mas sua filosofia é oposta à do Random Forest. Em vez de treinar árvores **independentes** e tirá-las a média (Bagging), o XGBoost treina árvores de forma **sequencial**: cada nova árvore é treinada para corrigir exclusivamente os erros (resíduos) que a árvore anterior cometeu. Esse processo iterativo de correção é chamado de **Boosting** (impulsionamento). Além disso, o XGBoost incorpora **regularização** ($L_1$ e $L_2$) nos pesos das árvores para controlar o Overfitting, e seu código interno é altamente otimizado em C++ com cache-awareness e paralelismo nativo. No nosso teste, ele foi o **campeão absoluto**: $R^2 = 0.836$, o maior poder preditivo, com um tempo de treinamento de apenas 1,18 segundos. Isso explica por que o XGBoost domina competições de Ciência de Dados no Kaggle há anos.
+
+**2.5. SVR (*Support Vector Regression*)**
+O SVR é a versão de regressão do SVM (Support Vector Machine). Enquanto o SVM de classificação busca o hiperplano que maximiza a margem de separação entre classes, o SVR busca uma "faixa" (tubo de largura $\varepsilon$, chamada *epsilon-insensitive tube*) que contenha o máximo possível de pontos de dados. Os pontos que ficam fora do tubo são chamados de **vetores de suporte** e são os únicos que contribuem para a função de perda. O SVR pode capturar relações não-lineares usando o **Kernel Trick** (por padrão, o kernel RBF — *Radial Basis Function*), que projeta os dados para um espaço de dimensão superior onde uma separação linear se torna possível. No nosso teste, ele obteve $R^2 = 0.727$, um resultado intermediário. Entretanto, seu tempo de treinamento foi **26,22 segundos** — o segundo mais lento — porque a complexidade computacional do SVR escala proporcionalmente a $O(n^2)$ ou $O(n^3)$ com o número de amostras, tornando-o extremamente lento para datasets grandes como o California Housing (20.640 linhas).
+
+**2.6. MLP Regressor (Rede Neural Artificial / *Multi-Layer Perceptron*)**
+A MLP é uma rede neural composta por camadas de **neurônios artificiais** (também chamados de perceptrons). Configuramos duas camadas ocultas com 100 e 50 neurônios, respectivamente (`hidden_layer_sizes=(100, 50)`). Cada neurônio recebe entradas ponderadas, soma-as, aplica uma **função de ativação** não-linear (por padrão, a ReLU — *Rectified Linear Unit*: $f(x) = \max(0, x)$), e propaga o resultado para a próxima camada. A camada de saída possui um único neurônio com **ativação linear** (identidade), pois precisamos prever um número contínuo, não uma classe.
+
+O treinamento ocorre pelo algoritmo **Backpropagation** combinado com um otimizador (por padrão, o Adam). A cada passagem pelos dados (época), a rede calcula o erro (MSE), propaga esse erro de volta pelas camadas e ajusta os pesos de cada conexão na direção que reduz o erro (Gradiente Descendente). Configuramos `max_iter=500` para dar à rede tempo suficiente de convergir. No nosso teste, a MLP obteve $R^2 = 0.793$, empatando tecnicamente com o Random Forest, mas ao custo de **74,94 segundos** de treinamento — o mais lento de todos. Isso ocorre porque ela precisa iterar centenas de vezes sobre os dados, ajustando milhares de pesos sinápticos.
+
+**3. As 4 Métricas Obrigatórias de Regressão**
+
+**3.1. MAE — Mean Absolute Error (Erro Médio Absoluto)**
+
+`MAE = (1/n) * Σ |yᵢ - ŷᵢ|`
+
+Calcula a média das diferenças absolutas entre o valor real e o previsto. É a métrica mais intuitiva: "em média, o modelo erra por X unidades". No nosso caso, o XGBoost errou por 0.31 (31 mil dólares em média). O MAE trata todos os erros de forma igual, independentemente de serem grandes ou pequenos.
+
+**3.2. MSE — Mean Squared Error (Erro Quadrático Médio)**
+
+`MSE = (1/n) * Σ (yᵢ - ŷᵢ)²`
+
+Eleva os erros ao quadrado antes de calcular a média. Isso **penaliza desproporcionalmente os erros grandes**: um erro de 10 contribui com 100, mas um erro de 100 contribui com 10.000. O MSE é a função de perda padrão usada internamente pela Regressão Linear (OLS) e pela MLP (Backpropagation). Sua desvantagem é que a unidade fica elevada ao quadrado (ex: "dólares²"), dificultando a interpretação direta.
+
+**3.3. RMSE — Root Mean Squared Error (Raiz do Erro Quadrático Médio)**
+
+`RMSE = √MSE`
+
+É simplesmente a raiz quadrada do MSE. A vantagem é que o RMSE retorna à **unidade original** da variável alvo (dólares), tornando-o interpretável. Ele mantém a propriedade de penalizar erros grandes (herdada do MSE). No nosso teste, o RMSE do XGBoost foi 0.462 (~46 mil dólares), enquanto o da Regressão Linear foi 0.745 (~74 mil dólares).
+
+**3.4. R² — Coeficiente de Determinação**
+
+`R² = 1 - (Σ (yᵢ - ŷᵢ)²) / (Σ (yᵢ - ȳ)²)`
+
+O $R^2$ compara o erro do modelo com o erro de um "modelo burro" que sempre prevê a média ($\bar{y}$). Seu valor varia de $-\infty$ a $1$:
+* $R^2 = 1$: Previsão perfeita. O modelo acertou todos os preços exatamente.
+* $R^2 = 0$: O modelo é tão ruim quanto simplesmente chutar a média geral dos preços.
+* $R^2 < 0$: O modelo é **pior** do que chutar a média (isso acontece em modelos severamente inadequados).
+
+O $R^2$ é a métrica mais poderosa para comparar modelos de regressão porque é **adimensional** (não depende da escala dos preços) e porque tem uma interpretação direta: "o modelo explica X% da variação nos preços". O XGBoost explicou 83.6% da variação, enquanto a Regressão Linear explicou apenas 57.5%.
+
+**4. Análise Crítica dos Resultados Experimentais**
+Os resultados do nosso experimento confirmam três padrões teóricos fundamentais da literatura de Machine Learning:
+
+* **Modelos Ensemble superam modelos individuais:** Random Forest ($R^2 = 0.804$) e XGBoost ($R^2 = 0.836$) esmagaram a Decision Tree individual ($R^2 = 0.623$). Isso valida experimentalmente que combinar múltiplos modelos fracos produz um modelo forte (o princípio do *Ensemble Learning*).
+
+* **Boosting supera Bagging:** O XGBoost (Boosting sequencial) superou o Random Forest (Bagging paralelo) por 3 pontos percentuais de $R^2$. Isso é consistente com a teoria: o Boosting foca cirurgicamente nos erros residuais, enquanto o Bagging trata todas as amostras com igual importância.
+
+* **Complexidade computacional vs. ganho:** A MLP consumiu 74,94 segundos (63x mais que o XGBoost) para atingir um $R^2$ inferior. Para datasets tabulares estruturados (tabelas de números), modelos baseados em árvores (XGBoost, Random Forest) consistentemente superam Redes Neurais. As Redes Neurais brilham em dados não-estruturados (imagens, áudio, texto), não em tabelas de CSV.
+
+* **A Regressão Linear como baseline:** Apesar de ser o pior modelo, a Regressão Linear cumpre um papel vital: ela serve como **baseline** (referência mínima). Se nenhum dos modelos complexos conseguisse superar a Regressão Linear, isso indicaria que o problema não tem relações preditivas nos dados ou que há um erro grave no pré-processamento.
+
+### ❓ 10 Perguntas da Banca sobre Modelagem de Regressão
+1. Por que a Regressão Linear foi o pior modelo no California Housing? Qual premissa matemática ela viola nesse dataset?
+2. Qual é a diferença conceitual entre **Bagging** (Random Forest) e **Boosting** (XGBoost)? Por que o Boosting tendeu a superar o Bagging neste experimento?
+3. A Decision Tree obteve $R^2 = 0.623$ enquanto o Random Forest obteve $R^2 = 0.804$. O que exatamente o Random Forest faz de diferente para obter esse ganho tão significativo?
+4. O que significa, na prática, dizer que o XGBoost possui $R^2 = 0.836$? Ele está explicando o quê?
+5. Qual a diferença entre MAE e RMSE? Em que cenário um engenheiro deveria preferir o MAE ao RMSE? *(Resposta: Quando outliers são esperados e não devem ser penalizados desproporcionalmente).*
+6. O SVR demorou 26 segundos para treinar. Por que a complexidade computacional do SVM escala tão mal com o número de amostras ($O(n^2)$ a $O(n^3)$)?
+7. A MLP foi configurada com `hidden_layer_sizes=(100, 50)`. O que aconteceria se usássemos apenas `(10,)` (uma única camada oculta com 10 neurônios)?
+8. Por que configuramos `max_iter=500` na MLP? O que aconteceria se deixássemos o padrão de 200? *(Resposta: A rede poderia não convergir e exibir um ConvergenceWarning, com métricas piores).*
+9. Vocês usaram `n_jobs=-1` no Random Forest e no XGBoost. O que esse parâmetro faz e qual é o ganho real? Ele funcionaria no SVR?
+10. Se o $R^2$ de um modelo fosse **negativo**, o que isso significaria? Seria possível? *(Resposta: Sim, significaria que o modelo é pior do que simplesmente prever a média dos preços para todas as casas).*
