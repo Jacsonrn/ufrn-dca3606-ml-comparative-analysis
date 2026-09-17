@@ -1,6 +1,6 @@
-# 🧠 Fundamentação Teórica e Preparação para Defesa
+# 🧠 Fundamentação Teórica do Projeto
 
-Este documento centraliza a teoria matemática e estratégica por trás de todas as decisões do código, **organizado estritamente pelo cronograma de dias de desenvolvimento do projeto**. Ele serve como um guia definitivo de estudo para responder às perguntas da banca examinadora durante a apresentação oral.
+Este documento centraliza a teoria matemática e estratégica por trás de todas as decisões do código, **organizado estritamente pelo cronograma de dias de desenvolvimento do projeto**. Ele serve como documentação técnica de referência, fundamentando cada etapa com os conceitos acadêmicos que a sustentam.
 
 ---
 
@@ -40,7 +40,7 @@ Um **ambiente virtual** é um diretório isolado que contém uma instalação in
 **7. O Papel do `random_state=42`**
 Em diversos pontos do código, usamos o parâmetro `random_state=42`. Algoritmos como `train_test_split` e `KMeans` dependem de números aleatórios internamente (para embaralhar dados, para inicializar centroides). Se não fixássemos essa semente, cada execução do código produziria resultados ligeiramente diferentes, impossibilitando a comparação justa entre modelos. Fixando a semente em 42 (um número arbitrário, escolhido por convenção da comunidade), garantimos que toda execução reproduza exatamente o mesmo embaralhamento e as mesmas inicializações.
 
-### ❓ 10 Perguntas da Banca sobre o Dia 1
+### ❓ 10 Questões de Revisão Técnica — Dia 1
 1. Por que vocês escolheram o dataset Breast Cancer especificamente para a tarefa de classificação? O que o torna didático?
 2. Quais são as variáveis-alvo (labels/targets) de cada dataset e de qual tipo estatístico elas são?
 3. Vocês chegaram a considerar o uso de datasets com dados textuais ou de imagens? Por que priorizaram dados estruturados numéricos?
@@ -130,7 +130,7 @@ Além do `StandardScaler`, existe o **MinMaxScaler**, que transforma os dados pa
 
 O MinMaxScaler é preferível em cenários onde: (a) você sabe que os dados não possuem outliers severos (pois um único outlier extremo comprime todos os outros valores perto de zero); (b) o algoritmo exige entradas no intervalo [0, 1] (como redes neurais com funções de ativação sigmoide). Para o nosso projeto, escolhemos o StandardScaler porque ele é mais robusto a outliers (que confirmamos existir no Boxplot) e é a recomendação padrão da documentação do `scikit-learn` para pipelines de classificação e regressão.
 
-### ❓ 10 Perguntas da Banca sobre a Análise Exploratória (EDA)
+### ❓ 10 Questões de Revisão Técnica — Análise Exploratória (EDA)
 1. O que é um *outlier* (ponto fora da curva) e como ele é visivelmente identificado no gráfico de Boxplot que vocês plotaram?
 2. O que representa, matematicamente falando, a "caixa" central de um Boxplot? (Resposta esperada: O Intervalo Interquartil - IQR, que vai do percentil 25% ao 75%).
 3. Vocês notaram desbalanceamento nas classes do Breast Cancer. Como a matemática dos modelos lida com classes desbalanceadas?
@@ -142,7 +142,7 @@ O MinMaxScaler é preferível em cenários onde: (a) você sabe que os dados nã
 9. O que significa dizer que um histograma tem um "viés à direita" (right-skewed distribution), como vimos nos preços das casas?
 10. Os algoritmos baseados em árvores (Decision Tree, Random Forest) sofrem muito impacto negativo por causa dos outliers que vimos nos Boxplots?
 
-### ❓ 10 Perguntas da Banca sobre o Pré-Processamento
+### ❓ 10 Questões de Revisão Técnica — Pré-Processamento
 1. Por que é estritamente obrigatório dividir os dados em treino e teste antes de fazer qualquer modelagem? O que é um modelo em *Overfitting*?
 2. Vocês utilizaram `stratify` apenas na divisão do dataset de câncer. O que isso faz no código e por que é vital para não distorcer o teste?
 3. Por que vocês NÃO usaram a estratificação na hora de dividir o California Housing? (Resposta esperada: porque variáveis contínuas numéricas não formam classes).
@@ -180,7 +180,7 @@ O DBSCAN é brilhante para capturar formas geométricas arbitrárias (que o K-Me
 * **Métricas Internas (Sem gabarito):** Inércia (coesão), Silhouette (mede se um ponto está mais perto do seu próprio cluster do que do cluster vizinho), Calinski-Harabasz (dispersão entre grupos vs intra-grupos) e Davies-Bouldin (menor significa clusters mais separados).
 * **Métricas Externas (Com gabarito):** ARI (Adjusted Rand Index) e NMI (Normalized Mutual Information). Aplicadas exclusivamente no Breast Cancer (pois temos as classes originais para comparar), avaliam se os clusters que o algoritmo encontrou sozinhos batem com a biologia real (Maligno/Benigno). Não usamos no California Housing pois seu alvo é contínuo (R$).
 
-### ❓ 10 Perguntas da Banca sobre Modelagem Não Supervisionada
+### ❓ 10 Questões de Revisão Técnica — Modelagem Não Supervisionada
 1. O que o PCA faz matematicamente? Ele exclui colunas irrelevantes ou ele as combina? *(Resposta: Ele não exclui, ele cria combinações lineares ortogonais de todas as colunas originais).*
 2. No gráfico de variância acumulada, por que nós traçamos uma linha vermelha em 90%?
 3. O algoritmo K-Means sofre muito com inicializações aleatórias (mínimos locais). Como o nosso uso do `init='k-means++'` no código evitou isso?
@@ -271,7 +271,7 @@ Os resultados do nosso experimento confirmam três padrões teóricos fundamenta
 
 * **A Regressão Linear como baseline:** Apesar de ser o pior modelo, a Regressão Linear cumpre um papel vital: ela serve como **baseline** (referência mínima). Se nenhum dos modelos complexos conseguisse superar a Regressão Linear, isso indicaria que o problema não tem relações preditivas nos dados ou que há um erro grave no pré-processamento.
 
-### ❓ 10 Perguntas da Banca sobre Modelagem de Regressão
+### ❓ 10 Questões de Revisão Técnica — Modelagem de Regressão
 1. Por que a Regressão Linear foi o pior modelo no California Housing? Qual premissa matemática ela viola nesse dataset?
 2. Qual é a diferença conceitual entre **Bagging** (Random Forest) e **Boosting** (XGBoost)? Por que o Boosting tendeu a superar o Bagging neste experimento?
 3. A Decision Tree obteve $R^2 = 0.623$ enquanto o Random Forest obteve $R^2 = 0.804$. O que exatamente o Random Forest faz de diferente para obter esse ganho tão significativo?
