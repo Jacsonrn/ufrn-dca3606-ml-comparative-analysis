@@ -282,3 +282,121 @@ Os resultados do nosso experimento confirmam três padrões teóricos fundamenta
 8. Por que configuramos `max_iter=500` na MLP? O que aconteceria se deixássemos o padrão de 200? *(Resposta: A rede poderia não convergir e exibir um ConvergenceWarning, com métricas piores).*
 9. Vocês usaram `n_jobs=-1` no Random Forest e no XGBoost. O que esse parâmetro faz e qual é o ganho real? Ele funcionaria no SVR?
 10. Se o $R^2$ de um modelo fosse **negativo**, o que isso significaria? Seria possível? *(Resposta: Sim, significaria que o modelo é pior do que simplesmente prever a média dos preços para todas as casas).*
+
+---
+
+# 📅 DIA 5: Modelagem Supervisionada — Classificação
+
+Neste dia, treinamos 6 algoritmos de classificação no dataset Breast Cancer Wisconsin para resolver um problema de diagnóstico binário: distinguir tumores malignos de benignos a partir de 30 características geométricas das células. A avaliação é realizada por meio de Matrizes de Confusão e 5 métricas obrigatórias.
+
+### 📚 Fundamentação Teórica do Dia 5
+
+**1. O Problema de Classificação Binária**
+Na classificação binária, o modelo recebe um vetor de atributos $X$ (as 30 medidas geométricas do tumor: raio, textura, perímetro, área, suavidade...) e deve produzir uma decisão categórica $\hat{y} \in \{0, 1\}$, onde 0 = Maligno e 1 = Benigno. Diferente da regressão (onde o modelo prevê um número contínuo), aqui o modelo deve traçar uma **fronteira de decisão** (*decision boundary*) no espaço 30-dimensional que separe as duas classes. Cada algoritmo constrói essa fronteira de uma forma geometricamente diferente, e é essa diferença que produz resultados distintos.
+
+**2. Os 6 Algoritmos de Classificação**
+
+**2.1. Regressão Logística (*Logistic Regression*)**
+Apesar do nome conter "Regressão", a Regressão Logística é um algoritmo de **classificação**. O nome vem do fato de que, internamente, ela calcula uma combinação linear das features (exatamente como a Regressão Linear), mas em vez de usar o resultado diretamente como predição, ela o passa pela **função Sigmoid** (também chamada função logística):
+
+`σ(z) = 1 / (1 + e^(-z))`
+
+Essa função "comprime" qualquer número real para o intervalo (0, 1), permitindo que o resultado seja interpretado como uma **probabilidade**. Se $σ(z) > 0.5$, o modelo classifica como Benigno (1); caso contrário, como Maligno (0). O treinamento ocorre por **Máxima Verossimilhança** (*Maximum Likelihood Estimation*): o algoritmo encontra os coeficientes $β$ que maximizam a probabilidade conjunta de que todas as amostras de treino tenham sido classificadas corretamente. A função de perda resultante é a **Log-Loss** (ou *Binary Cross-Entropy*):
+
+`L = -(1/n) * Σ [yᵢ log(ŷᵢ) + (1 - yᵢ) log(1 - ŷᵢ)]`
+
+No nosso experimento, a Regressão Logística foi **campeã** (F1 = 0.986, Acurácia = 98.2%). Isso ocorre porque o dataset Breast Cancer é **altamente separável de forma linear**: os tumores malignos e benignos ocupam regiões bem distintas no espaço 30-dimensional, como confirmamos visualmente na projeção PCA do Dia 3. Quando os dados são linearmente separáveis, modelos simples como a Regressão Logística são ideais porque não correm o risco de Overfitting que assombra modelos mais complexos.
+
+**2.2. Árvore de Decisão (*Decision Tree Classifier*)**
+Funciona exatamente como na regressão (Dia 4), mas em vez de prever a média dos preços em cada folha, a folha atribui a **classe majoritária** (a classe que aparece com mais frequência entre as amostras que caíram naquela região). O critério de divisão padrão é o **Gini Impurity** (Impureza de Gini):
+
+`Gini = 1 - Σ pᵢ²`
+
+Onde $p_i$ é a proporção de amostras da classe $i$ no nó. Um Gini = 0 significa que o nó é "puro" (contém apenas uma classe). A árvore escolhe, em cada nó, a feature e o limiar de corte que produzem a maior redução na impureza de Gini. No nosso teste, a Decision Tree foi o **pior modelo** (F1 = 0.928) precisamente por causa do Overfitting: sem poda (*pruning*), ela criou ramificações excessivamente específicas para os dados de treino que não generalizaram para o teste.
+
+**2.3. Random Forest Classifier (Floresta Aleatória)**
+Aplica a mesma estratégia de **Bagging** descrita no Dia 4: treina 100 Árvores de Decisão independentes, cada uma em uma amostra aleatória (*bootstrap*) dos dados e com um subconjunto aleatório de features. A classificação final é determinada por **votação majoritária** (*majority voting*): cada árvore "vota" na classe que ela acha correta, e a classe com mais votos vence. No nosso teste, obteve F1 = 0.965, superando amplamente a árvore individual, mas ficando atrás da Regressão Logística.
+
+**2.4. XGBoost Classifier**
+Aplica o **Boosting** sequencial descrito no Dia 4. Para classificação binária, a função de perda muda de MSE (usada na regressão) para **Log-Loss** (a mesma da Regressão Logística). Cada nova árvore é treinada para corrigir os resíduos probabilísticos da árvore anterior. No nosso teste, obteve F1 = 0.965, empatando com o Random Forest. A complexidade do XGBoost não trouxe vantagem aqui porque o problema é simples demais para ele — como usar uma bazuca para matar uma mosca.
+
+**2.5. SVC (*Support Vector Classifier*)**
+O SVC busca o **hiperplano de máxima margem**: o plano que separa as classes com a maior distância possível até os pontos mais próximos de cada classe (os **vetores de suporte**). Usando o **Kernel RBF** (padrão), o SVC projeta os dados para um espaço de dimensão superior onde uma separação linear perfeita se torna possível, mesmo que os dados originais não sejam linearmente separáveis. No nosso teste, o SVC **empatou** com a Regressão Logística (F1 = 0.986), confirmando que a fronteira ótima entre as classes é predominantemente linear.
+
+Nota técnica: configuramos `probability=True` no código. Isso é necessário porque o SVC, por padrão, produz apenas classes (0 ou 1), não probabilidades. Para calcular o ROC-AUC, precisamos de probabilidades contínuas. O `probability=True` ativa internamente a calibração de Platt (*Platt Scaling*), que ajusta uma Regressão Logística sobre as saídas do SVM para produzir probabilidades.
+
+**2.6. MLP Classifier (Rede Neural Artificial)**
+A arquitetura é idêntica à MLP de regressão (Dia 4): duas camadas ocultas com 100 e 50 neurônios, função de ativação ReLU nas camadas internas. A diferença crítica está na **camada de saída**:
+* **Classificação Binária:** A camada de saída usa a função **Sigmoid** (que comprime a saída para [0, 1]), e a perda é a **Log-Loss** (*Binary Cross-Entropy*).
+* **Classificação Multiclasse (3+ classes):** A camada de saída usaria a função **Softmax** (que distribui probabilidades entre todas as classes somando 1), e a perda seria a *Categorical Cross-Entropy*.
+
+O `scikit-learn` infere automaticamente qual função usar com base no formato dos rótulos, sem necessidade de configuração explícita. No nosso teste, a MLP obteve o **pior Recall** entre os modelos competitivos (93%), significando que ela cometeu mais **Falsos Negativos** (diagnosticou tumores malignos como benignos) que a Regressão Logística ou o SVC.
+
+**3. Anatomia da Matriz de Confusão**
+A Matriz de Confusão é uma tabela 2×2 que decompõe as predições em 4 categorias:
+
+|  | **Previsto: Maligno (0)** | **Previsto: Benigno (1)** |
+|---|---|---|
+| **Real: Maligno (0)** | VP (Verdadeiro Positivo*) | **FN (Falso Negativo)** ⚠️ |
+| **Real: Benigno (1)** | FP (Falso Positivo) | VN (Verdadeiro Negativo*) |
+
+(*Nota: a convenção VP/VN pode variar dependendo de qual classe é definida como "positiva". No scikit-learn, a classe positiva padrão é a classe 1 = Benigno.*)
+
+No contexto médico deste projeto, o quadrante mais perigoso é o **Falso Negativo (FN)**: um tumor que é realmente maligno, mas que o modelo classificou como benigno. Esse paciente seria liberado sem tratamento. É por isso que o **Recall** (que mede a taxa de detecção dos verdadeiros positivos) é a métrica mais crítica neste domínio.
+
+**4. As 5 Métricas Obrigatórias de Classificação**
+
+**4.1. Acurácia (*Accuracy*)**
+
+`Acurácia = (VP + VN) / (VP + VN + FP + FN)`
+
+É a proporção total de acertos. É intuitiva mas **enganosa em datasets desbalanceados**: se 99% das amostras fossem benignas, um modelo que sempre previsse "benigno" teria 99% de acurácia sem ter aprendido nada sobre câncer.
+
+**4.2. Precisão (*Precision*)**
+
+`Precisão = VP / (VP + FP)`
+
+Responde: "De todos os tumores que o modelo disse serem malignos, quantos realmente eram?". Uma precisão alta significa poucos **alarmes falsos** (Falsos Positivos). É importante quando o custo de um alarme falso é alto (ex: uma cirurgia desnecessária).
+
+**4.3. Recall (Sensibilidade / *Sensitivity / True Positive Rate*)**
+
+`Recall = VP / (VP + FN)`
+
+Responde: "De todos os tumores que realmente eram malignos, quantos o modelo conseguiu detectar?". Um recall alto significa poucos **diagnósticos perdidos** (Falsos Negativos). No contexto oncológico, esta é a métrica mais vital: falhar em detectar um câncer é potencialmente fatal. A Regressão Logística e o SVC atingiram Recall de 98.6%, enquanto a MLP ficou em 93%.
+
+**4.4. F1-Score**
+
+`F1 = 2 × (Precisão × Recall) / (Precisão + Recall)`
+
+É a **média harmônica** entre Precisão e Recall. A média harmônica é mais rigorosa que a média aritmética: se uma das duas métricas for muito baixa, o F1 despenca. Isso faz do F1-Score a métrica balanceada ideal para comparar modelos em problemas onde tanto FP quanto FN têm custo significativo. Ordenamos a tabela de resultados pelo F1-Score precisamente por essa razão.
+
+**4.5. ROC-AUC (*Area Under the Receiver Operating Characteristic Curve*)**
+
+A curva ROC plota a **Taxa de Verdadeiros Positivos (TPR = Recall)** no eixo Y contra a **Taxa de Falsos Positivos (FPR = FP / (FP + VN))** no eixo X, variando o limiar de decisão (*threshold*) de 0 a 1. A **AUC** (Area Under the Curve) resume essa curva em um único número entre 0 e 1:
+* AUC = 1.0: Separação perfeita entre classes.
+* AUC = 0.5: O modelo não é melhor que um chute aleatório (a linha diagonal do gráfico).
+* AUC < 0.5: O modelo está invertendo as classes (classificando malignos como benignos e vice-versa).
+
+Todos os nossos modelos atingiram AUC > 0.99 (exceto a Decision Tree com 0.915), confirmando que o dataset Breast Cancer é altamente separável.
+
+**5. Análise Crítica dos Resultados Experimentais**
+
+* **A vitória da simplicidade:** A Regressão Logística e o SVC empataram em 1º lugar (F1 = 0.986). Isso demonstra empiricamente o **princípio da Navalha de Occam** em Machine Learning: quando os dados são linearmente separáveis, o modelo mais simples é o melhor, pois generaliza sem overfitting. A visualização PCA do Dia 3 já havia antecipado esse resultado ao mostrar clusters claramente separados.
+
+* **Ensemble não garante superioridade:** No Dia 4 (Regressão), o XGBoost foi campeão absoluto. No Dia 5 (Classificação), ele ficou em 3º lugar. Isso prova que não existe "melhor algoritmo universal" — o desempenho depende da **natureza geométrica dos dados**. Esse é o *No Free Lunch Theorem*: nenhum algoritmo domina em todos os problemas.
+
+* **O custo clínico do Falso Negativo:** A MLP obteve Recall = 93%, o que em 72 tumores malignos do teste significa que aproximadamente 5 pacientes com câncer seriam enviados para casa sem diagnóstico. A Regressão Logística errou em apenas 1 caso. Em aplicações médicas reais, essa diferença pode ser a diferença entre vida e morte.
+
+* **Velocidade vs. Complexidade:** A Regressão Logística convergiu em 0,03 segundos. A MLP levou 1,55 segundos (52x mais lenta) para atingir um resultado inferior. Para este dataset específico, a complexidade adicional da rede neural foi puro desperdício computacional.
+
+### ❓ 10 Questões de Revisão Técnica — Classificação Supervisionada
+1. A Regressão Logística tem "Regressão" no nome. Por que ela é, na verdade, um algoritmo de classificação? Qual função matemática transforma a saída linear em probabilidade?
+2. Por que a Regressão Logística e o SVC superaram o XGBoost neste dataset, quando no Dia 4 o XGBoost foi campeão absoluto? O que isso revela sobre a geometria dos dados?
+3. Explique a diferença entre Precisão e Recall. Em um contexto de diagnóstico de câncer, qual das duas métricas é mais importante e por quê?
+4. O que é a Matriz de Confusão? Identifique qual quadrante representa o Falso Negativo e explique por que ele é o mais perigoso em aplicações médicas.
+5. O F1-Score é a média harmônica entre Precisão e Recall. Por que se usa a média harmônica em vez da média aritmética simples? *(Resposta: A média harmônica penaliza valores discrepantes — se uma métrica for 0.99 e a outra for 0.01, a média aritmética seria 0.50, mas a harmônica seria ~0.02, revelando a fragilidade real).*
+6. O que representa a linha diagonal tracejada no gráfico da Curva ROC? O que significaria se a curva de um modelo passasse **abaixo** dessa linha?
+7. Por que foi necessário configurar `probability=True` no SVC para calcular o ROC-AUC? O que a calibração de Platt (*Platt Scaling*) faz internamente?
+8. A Decision Tree obteve AUC = 0.915, significativamente inferior aos demais (~0.99). O que causa essa degradação e como técnicas de poda (*pruning*) poderiam melhorar esse resultado?
+9. No scikit-learn, a MLP usa automaticamente Sigmoid na saída para problemas binários e Softmax para multiclasse. Qual é a diferença matemática entre essas duas funções de ativação?
+10. Se tivéssemos um dataset com 99% de amostras benignas e 1% malignas, a Acurácia de 99% seria confiável? Qual métrica usaríamos em vez dela e quais técnicas de balanceamento poderiam ser aplicadas? *(Resposta: Usaríamos F1 ou Recall; técnicas como SMOTE, undersampling, ou class_weight='balanced').*
