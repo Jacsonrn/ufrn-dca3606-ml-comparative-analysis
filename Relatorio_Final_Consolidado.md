@@ -1,0 +1,66 @@
+# 🏆 Relatório Final Consolidado — Projeto de Machine Learning (Unidade 1)
+
+Este documento apresenta a síntese dos resultados obtidos nos experimentos de Aprendizado Não Supervisionado (Dia 3), Aprendizado Supervisionado de Regressão (Dia 4) e Aprendizado Supervisionado de Classificação (Dia 5).
+
+---
+
+## 1. Tabela de Consolidação — Agrupamento (Não Supervisionado)
+
+Os algoritmos de agrupamento tentaram encontrar padrões autônomos sem usar os gabaritos originais.
+
+### Dataset: Breast Cancer Wisconsin
+| Algoritmo | K / Epsilon | Inércia (↓) | Silhouette (↑) | Calinski-Harabasz (↑) | Davies-Bouldin (↓) |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **K-Means** | K = 2 | 11595.53 | **0.3434** | **267.69** | 1.3205 |
+| **DBSCAN** | eps = 2.5 | N/A | 0.1295 | 6.37 | **1.2662** |
+
+### Dataset: California Housing
+| Algoritmo | K / Epsilon | Inércia (↓) | Silhouette (↑) | Calinski-Harabasz (↑) | Davies-Bouldin (↓) |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **K-Means** | K = 3 | 110213.28 | **0.3349** | **5140.53** | **1.0627** |
+| **DBSCAN** | eps = 1.0 | N/A | N/A* | N/A* | N/A* |
+*\*Nota: O DBSCAN classificou quase todos os pontos contínuos como ruído ou como um único aglomerado gigantesco, impedindo o cálculo de métricas de separação intra-cluster.*
+
+### 🧠 Análise Crítica dos Agrupamentos
+* **A vitória do K-Means em dados estruturados:** O K-Means dominou amplamente o Silhouette Score nos dois datasets (0.34 e 0.33). Isso ocorreu porque os dados foram previamente padronizados (`StandardScaler`), o que tornou as distribuições esféricas, cenário ideal para a métrica Euclidiana geométrica do K-Means.
+* **O fracasso do DBSCAN na Califórnia:** O DBSCAN falhou catastroficamente no California Housing. Como o dataset da Califórnia mapeia preços baseados em coordenadas geográficas contínuas (sem vales vazios separando as densidades), o DBSCAN enxergou o mapa do estado como um bloco sólido contínuo, não conseguindo traçar clusters distintos. Isso prova que algoritmos baseados em densidade sofrem severamente em problemas espaciais sem quebras naturais de continuidade.
+
+---
+
+## 2. Tabela de Consolidação — Regressão Supervisionada
+
+Os algoritmos foram avaliados em 4.128 amostras invisíveis de teste. O objetivo era prever o preço exato das casas na Califórnia.
+
+| Posição | Modelo | MAE (↓) | MSE (↓) | RMSE (↓) | **R² (↑)** | Tempo (s) |
+| :---: | :--- | :---: | :---: | :---: | :---: | :---: |
+| 🥇 | **XGBoost Regressor** | **0.3107** | **0.2140** | **0.4626** | **0.8366** | 1.18 |
+| 🥈 | Random Forest | 0.3277 | 0.2559 | 0.5058 | 0.8047 | 11.28 |
+| 🥉 | MLP (Rede Neural) | 0.3520 | 0.2709 | 0.5205 | 0.7931 | 74.94 |
+| 4º | SVR | 0.3985 | 0.3570 | 0.5974 | 0.7275 | 26.22 |
+| 5º | Decision Tree | 0.4531 | 0.4929 | 0.7021 | 0.6237 | 0.53 |
+| 6º | Regressão Linear | 0.5332 | 0.5558 | 0.7455 | 0.5757 | **0.08** |
+
+### 🧠 Análise Crítica de Regressão
+* **O Domínio do Boosting Sequencial:** O XGBoost foi o campeão absoluto. Ele construiu árvores sequencialmente, onde cada árvore focava exclusivamente em corrigir os erros residuais da árvore anterior. Esse processo (*Gradient Boosting*) provou ser clinicamente mais cirúrgico que o *Bagging* paralelo do Random Forest, alcançando impressionantes 83.6% de variância explicada ($R^2$).
+* **A Falha Estrutural da Regressão Linear:** O pior modelo foi a Regressão Linear. Isso não foi uma surpresa técnica: os preços imobiliários da Califórnia possuem relações geográficas não-lineares severas (ex: proximidade do oceano não escala em linha reta com coordenadas matemáticas). A Regressão Linear forçou uma reta em dados curvos.
+* **O Desperdício Computacional da MLP:** A Rede Neural exigiu 74,94 segundos de computação exaustiva por retropropagação para atingir um $R^2$ inferior ao do XGBoost (que levou míseros 1,18 segundos otimizados em C++). Isso ratifica a teoria: para tabelas de dados estruturados tradicionais, árvores *Ensemble* esmagam Redes Neurais em Custo-Benefício computacional.
+
+---
+
+## 3. Tabela de Consolidação — Classificação Supervisionada
+
+Os algoritmos foram avaliados em 114 tumores isolados de teste. O objetivo era diagnosticar corretamente tumores Malignos (0) vs Benignos (1).
+
+| Posição | Modelo | Acurácia (↑) | Precisão (↑) | Recall (↑) | **F1-Score (↑)** | ROC-AUC (↑) | Tempo (s) |
+| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| 🥇 | **Logistic Regression** | **0.9824** | **0.9861** | **0.9861** | **0.9861** | **0.9953** | 0.03 |
+| 🥇 | **SVC (Support Vector)**| **0.9824** | **0.9861** | **0.9861** | **0.9861** | 0.9950 | 0.07 |
+| 3º | XGBoost Classifier | 0.9561 | 0.9466 | **0.9861** | 0.9659 | 0.9927 | 0.66 |
+| 4º | Random Forest | 0.9561 | 0.9589 | 0.9722 | 0.9655 | 0.9938 | 0.54 |
+| 5º | MLP (Rede Neural) | 0.9473 | 0.9852 | 0.9305 | 0.9571 | 0.9943 | 1.55 |
+| 6º | Decision Tree | 0.9122 | 0.9558 | 0.9027 | 0.9285 | 0.9156 | **0.01** |
+
+### 🧠 Análise Crítica de Classificação
+* **O Princípio da Navalha de Occam:** Os modelos mais simples e matematicamente rígidos (Regressão Logística e SVC) esmagaram os sofisticados algoritmos Ensemble e Redes Neurais. Isso ocorreu porque, como vimos na análise de componentes principais (PCA) no Dia 3, as classes de câncer maligno e benigno são **altamente separáveis de forma linear** no espaço 30-dimensional. Modelos complexos tentaram criar fronteiras sinuosas e acabaram sofrendo sutil *Overfitting*, enquanto a Regressão Logística simplesmente traçou uma reta logarítmica perfeita.
+* **O Risco do Falso Negativo (Recall):** No contexto oncológico, o pior erro médico é classificar um tumor maligno como benigno (Falso Negativo), mandando um doente para casa. A métrica **Recall** captura isso. A MLP teve um Recall péssimo de apenas 93%, o que significa que falhou miseravelmente na identificação de múltiplos tumores fatais. Em contrapartida, Regressão Logística, SVC e XGBoost apresentaram Recalls formidáveis de 98.61%.
+* **Desempenho Geral:** O empate técnico na liderança entre Regressão Logística e SVC (F1 = 0.986) prova que, em problemas bem-comportados e bem-padronizados geometricamente, algoritmos paramétricos clássicos ainda são o Padrão-Ouro da estatística.
