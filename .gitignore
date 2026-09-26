@@ -13,6 +13,7 @@ __pycache__/
 data/
 *.csv
 *.xlsx
+*.png
 
 Plano de Execução do Projeto em 7 Dias.md
 restrições e obrigações.md
